@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
-  <!-- user-scalable=yes permite zoom táctil -->
   <title>SGO/P · NEXUS · Análisis de Reclamos Bancarios</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,9 +21,10 @@
       height: 100vh;
       overflow: hidden;
       background-image: radial-gradient(circle at 25% 40%, rgba(0, 163, 255, 0.08) 0%, transparent 65%);
-      touch-action: pan-x pan-y; /* permite desplazamiento pero no bloquea zoom */
+      touch-action: pan-x pan-y;
     }
 
+    /* Modo normal (no fullscreen) */
     .nexus-header {
       position: fixed;
       top: 0;
@@ -107,7 +107,7 @@
       justify-content: center;
       overflow: auto;
       -webkit-overflow-scrolling: touch;
-      touch-action: pinch-zoom; /* permite zoom dentro de cada slide */
+      touch-action: pinch-zoom;
     }
 
     .slide {
@@ -122,46 +122,7 @@
       touch-action: pinch-zoom;
     }
 
-    /* Spinner de carga */
-    .loader {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 48px;
-      height: 48px;
-      border: 4px solid rgba(0, 163, 255, 0.3);
-      border-top: 4px solid #00A3FF;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      z-index: 20;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
-    .loader.active {
-      opacity: 1;
-    }
-
-    @keyframes spin {
-      0% { transform: translate(-50%, -50%) rotate(0deg); }
-      100% { transform: translate(-50%, -50%) rotate(360deg); }
-    }
-
-    .progress-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 0%;
-      height: 3px;
-      background: linear-gradient(90deg, #00A3FF, #7EC8FF);
-      z-index: 100;
-      box-shadow: 0 0 10px #00A3FF;
-      transition: width 0.2s ease-out;
-    }
-
-    /* Barra de botones inferior */
+    /* Barra inferior normal */
     .nav-controls {
       position: fixed;
       bottom: 20px;
@@ -213,7 +174,6 @@
       user-select: none;
     }
 
-    /* Panel de miniaturas (grid) */
     .thumbnails-panel {
       position: fixed;
       bottom: 100px;
@@ -266,6 +226,59 @@
       pointer-events: none;
     }
 
+    /* ========== ESTILOS PARA MODO PANTALLA COMPLETA ========== */
+    body:fullscreen,
+    body:-webkit-full-screen,
+    body:-moz-full-screen,
+    body:-ms-fullscreen {
+      overflow: auto !important;  /* Permitir scroll al hacer zoom */
+    }
+
+    /* Cuando el documento está en fullscreen, ocultamos barras y ajustamos la diapositiva */
+    :fullscreen .nexus-header,
+    :-webkit-full-screen .nexus-header,
+    :-moz-full-screen .nexus-header,
+    :-ms-fullscreen .nexus-header,
+    :fullscreen .nav-controls,
+    :-webkit-full-screen .nav-controls,
+    :-moz-full-screen .nav-controls,
+    :-ms-fullscreen .nav-controls,
+    :fullscreen .nexus-footer,
+    :-webkit-full-screen .nexus-footer,
+    :-moz-full-screen .nexus-footer,
+    :-ms-fullscreen .nexus-footer {
+      display: none !important;
+    }
+
+    :fullscreen .presentation-container,
+    :-webkit-full-screen .presentation-container,
+    :-moz-full-screen .presentation-container,
+    :-ms-fullscreen .presentation-container {
+      padding: 0 !important;
+      height: 100vh;
+      background: #000;
+    }
+
+    :fullscreen .slide-wrapper,
+    :-webkit-full-screen .slide-wrapper,
+    :-moz-full-screen .slide-wrapper,
+    :-ms-fullscreen .slide-wrapper {
+      background: #000;
+    }
+
+    :fullscreen .slide,
+    :-webkit-full-screen .slide,
+    :-moz-full-screen .slide,
+    :-ms-fullscreen .slide {
+      max-width: 100% !important;
+      max-height: 100% !important;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
     @media (max-width: 600px) {
       .nexus-header { padding: 8px 16px; }
       .nexus-logo { height: 30px; }
@@ -298,10 +311,8 @@
   <div class="loader" id="loader"></div>
 </div>
 
-<!-- Panel de miniaturas -->
 <div class="thumbnails-panel" id="thumbnailsPanel"></div>
 
-<!-- Barra inferior de controles -->
 <div class="nav-controls">
   <div class="nav-btn" id="prevBtn" title="Anterior">◀</div>
   <div class="counter" id="counter">1 / 12</div>
@@ -313,23 +324,17 @@
 
 <div class="nexus-footer">NEXUS · KENNY SIEVERES</div>
 
-<!-- ENLACES DE DESCARGA COMPLETA (PDF y PPTX) - CONFIGURAR AQUÍ -->
+<!-- Enlaces de descarga (configurar PDF y PPTX) -->
 <div style="display: none;">
-  <!-- === INSTRUCCIONES: Coloca tus enlaces de Google Drive (o cualquier URL) en los href de abajo === -->
   <a id="pdfDownloadLink" href="#" target="_blank">Enlace PDF</a>
   <a id="pptxDownloadLink" href="#" target="_blank">Enlace PowerPoint</a>
-  <!-- 
-    Ejemplo:
-    <a id="pdfDownloadLink" href="https://drive.google.com/your-pdf-file" target="_blank">Enlace PDF</a>
-    <a id="pptxDownloadLink" href="https://drive.google.com/your-pptx-file" target="_blank">Enlace PowerPoint</a>
-  -->
 </div>
 
 <script>
   (function(){
     const TOTAL_SLIDES = 12;
     let currentIdx = 0;
-    let slidesData = []; // almacenará URLs de imágenes
+    let slidesData = [];
     let isLoading = false;
     let preloadedImages = [];
 
@@ -345,7 +350,6 @@
     const downloadSlideBtn = document.getElementById('downloadSlideBtn');
     const thumbPanel = document.getElementById('thumbnailsPanel');
     
-    // Función para obtener URL de imagen (probando .png y .PNG)
     function getImageUrl(slideNumber, callback) {
       const padded = slideNumber.toString().padStart(2, '0');
       const urlPng = `img/slide-${padded}.png`;
@@ -362,7 +366,6 @@
       testImg.src = urlPng;
     }
     
-    // Precargar todas las diapositivas al inicio
     function preloadAllSlides(callback) {
       let loaded = 0;
       for (let i = 1; i <= TOTAL_SLIDES; i++) {
@@ -379,7 +382,6 @@
       }
     }
     
-    // Construir el track con todas las diapositivas (para deslizamiento)
     function buildTrack() {
       track.innerHTML = '';
       for (let i = 0; i < TOTAL_SLIDES; i++) {
@@ -407,7 +409,6 @@
       const percent = (slideNum / TOTAL_SLIDES) * 100;
       progressBar.style.width = `${percent}%`;
       
-      // Actualizar miniatura activa si el panel está abierto
       document.querySelectorAll('.thumbnail').forEach((thumb, idx) => {
         if (idx === currentIdx) thumb.classList.add('active-thumb');
         else thumb.classList.remove('active-thumb');
@@ -426,7 +427,6 @@
     function nextSlide() { goToSlide(currentIdx + 1); }
     function prevSlide() { goToSlide(currentIdx - 1); }
     
-    // Generar panel de miniaturas
     function buildThumbnails() {
       thumbPanel.innerHTML = '';
       for (let i = 0; i < TOTAL_SLIDES; i++) {
@@ -442,7 +442,6 @@
       }
     }
     
-    // Descargar diapositiva actual como PNG
     function downloadCurrentSlide() {
       const currentImg = track.children[currentIdx]?.querySelector('img');
       if (!currentImg || !currentImg.src) {
@@ -455,11 +454,12 @@
       link.click();
     }
     
-    // Pantalla completa mejorada
+    // Función mejorada para pantalla completa + adaptación visual
     function toggleFullscreen() {
       const docEl = document.documentElement;
       const reqFull = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
       const exitFull = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+      
       if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
         if (reqFull) reqFull.call(docEl).catch(e => console.warn(e));
       } else {
@@ -467,22 +467,16 @@
       }
     }
     
-    // Configurar enlaces de descarga externos (PDF y PPTX) - editar aquí
     function setupExternalDownloads() {
-      // === CONFIGURACIÓN: Cambia las URLs por las de tus archivos en Google Drive ===
-      const PDF_URL = "#";   // <--- Coloca aquí el enlace de tu PDF
-      const PPTX_URL = "#";  // <--- Coloca aquí el enlace de tu PowerPoint
-      
+      const PDF_URL = "#";   // Coloque su enlace de PDF
+      const PPTX_URL = "#";  // Coloque su enlace de PowerPoint
       const pdfLink = document.getElementById('pdfDownloadLink');
       const pptxLink = document.getElementById('pptxDownloadLink');
       if (pdfLink) pdfLink.href = PDF_URL;
       if (pptxLink) pptxLink.href = PPTX_URL;
-      
-      // Opcional: añadir botones en la barra para descarga completa (puedes agregarlos si gustas)
-      // Por simplicidad, usamos los enlaces ocultos. Puedes mostrar botones adicionales si lo deseas.
     }
     
-    // Eventos y UI
+    // Event listeners
     prevBtn.addEventListener('click', prevSlide);
     nextBtn.addEventListener('click', nextSlide);
     fullBtn.addEventListener('click', toggleFullscreen);
@@ -527,9 +521,6 @@
       updateSlidePosition(false);
       setupExternalDownloads();
     });
-    
-    // Forzar zoom táctil: añadir atributo extra al body (ya está en meta)
-    // Además, cada slide-wrapper tiene touch-action: pinch-zoom
   })();
 </script>
 </body>
